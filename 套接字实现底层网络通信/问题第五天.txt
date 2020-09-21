@@ -1,0 +1,21 @@
+主要是第二天的建立客户端之间连接的问题。
+·建立连接，得到的socket还是在服务器内，恐怕得让客户端作为“服务器”了，那样的话客户端是真的要像服务器一样工作准备
+接受多个tcp连接，然后什么监听都要做。---这样的本质还是客户端和服务器一对一的那种双全工的操作
+·客户端是自建一个socket，然后socket.connect(服务器的地址),接入服务器的
+ 服务器是自建套接字，bind绑定自己的地址和套接字，listen连接的数量，无限循环accept连接，从而建立连接的
+·create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
+                      source_address=None):
+    """Connect to *address* and return the socket object.
+    Convenience function.  Connect to *address* (a 2-tuple ``(host,
+    port)``) and return the socket object.  Passing the optional
+    *timeout* parameter will set the timeout on the socket instance
+    before attempting to connect.  If no *timeout* is supplied, the
+    global default timeout setting returned by :func:`getdefaulttimeout`
+    is used.  If *source_address* is set it must be a tuple of (host, port)
+    for the socket to bind as a source address before making the connection.
+    A host of '' or port 0 tells the OS to use the default.
+    """
+    他是属于class SocketIO类的
+单方面在一个客户端调用上面函数直接ConnectionRefusedError: [WinError 10061] 由于目标计算机积极拒绝，无法连接。单方面建立在
+逻辑上是错的。但是在网上看的一个linux版本的python socket多房间聊天的案例他，就是第二天那个，通过服务器把信息转接给其他的客户端的。
+那就没什么意思了。let's do that.

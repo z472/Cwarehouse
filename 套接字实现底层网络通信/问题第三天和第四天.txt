@@ -1,0 +1,18 @@
+No.3
+1.线程的threading.join()函数的意义是等待这个线程结束，它如果位置不对就卡住后面的代码了
+2.threading.Thread()参数中的args，我传个列表（第一次传的时候是空列表），报错如下：
+    “TypeError: Srecv() missing 1 required positional argument: 'Sock' ”
+我用的是传给线程一个入口函数的方式创建的线程，当时函数声明的参数是Sock--我建好的一个空列表，当我把它改成'*args'就正常运行了
+3.从问题2中查资料结合自己的小测试了解到，python的函数声明时的参数*args中的args是个元组名，可以在函数内使用。列表前面加*是把
+自己的内容传给这个元组，如果给*args传一个列表的话，这个列表会作为args元组的第一个值。
+No.4
+1.对于recv阻塞和非阻塞的处理，recv默认是阻塞的（就从效果上理解，他接受一个socket的信息，如果那个套接字无返回它就卡在那里，一直
+傻等）。可以通过一个方法设置为非阻塞，socket.setblocking(False);socket.settimeout(0)(只能是非负数，0就是非阻塞，其他意
+思是socket.settimeout(value)文档的内容：subsequent socket operations will raise a timeout exception
+if the timeout period value has elapsed before the operation has completed.;如果None，则是正常的阻塞模式）
+但是非阻塞模式会出现一种情况就是socket的通信被设置为了非阻塞但他connect仍是阻塞的send,recv等操作会在连接没建立好的时候就执行。
+（以上表述可能不对或是不准确，我反正是半知半解，因为我线程函数里第一行也是有判断传入的线程列表是否为空，但是它就是在内部的recv行
+出现[WinError 10035] 无法立即完成一个非阻止性套接字操作 这个错误）处理办法是无视它，网上的，理解上就是说他无信息就会报错，但是
+有信息就会正确执行。所以就是try...except...然后pass，确实没问题了
+（我当时想的是在这个服务器的接受线程中开设一对一的子线程）
+2.当一个客户断开连接，服务器居然会报错，也断开了。---应该是我的线程没有机会执行join()函数所致
