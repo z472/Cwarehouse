@@ -1,0 +1,27 @@
+1.怎么使用ftplib.retrbinary()下载文件，他的参数-回调函数怎么实现功能的
+答案1.利用文件知识，先with open('filename','wb+')一个文件地址（注意不要是一个文件夹，要是一个文件的地址）
+（如果给的是文件夹名会 PermissionError: [Errno 13] Permission denied 报错--没有权限）
+wb+模式相关知识：
+r+ : 可读、可写，文件不存在也会报错，写操作时会覆盖（r为只读）
+w+ : 可读，可写，文件不存在先创建，会覆盖（w为只写）
+a+ ：可读、可写，文件不存在先创建，不会覆盖，追加在末尾(a为追加，ab+是以二进制)
+把要下载的文件名和‘RETR %s' % filename作为第一个参数，
+第二个参数为打开文件的句柄的write方法，作为回调函数callback，cb函数要求以str作为参数，并可以利用str做事
+还可以设置blocksize一个缓冲区的大小，感觉不必要，不设置的话也有默认
+···
+写用户交互的程序，不仅要写必要的提示输入信息，做好报错的收集；还要必要的时候把用户的操作显示出来（因为这并不是
+GUI程序，用户和调试时的’我‘一样不确定，结果如何。）
+···
+2.下载时发现文件名如果是中文，会把乱码给作为下载文件的文件名；输入文件名的时候如果包含中文，直接报错？
+答案2.        f.encoding = 'GB18030'
+    # 感谢OSCHINA网站上的名为秦琼用户的经验之谈，ftplib模块默认是"latin-1",
+    # 很多网站上的建议是把encoding设置为’utf-8‘(而且抄袭现象严重)，f.nlst f.retrlines都会报错
+    # Local\Programs\Python\Python38\lib\codecs.py", line 322, in decode
+    # (result, consumed) = self._buffer_decode(data, self.errors, final)
+    # UnicodeDecodeError: 'utf-8' codec can't decode byte 0xb4 in position 180: invalid start byte
+    已经实测了，两种情况都解决了。（那个GB18030是一个字符集）
+···
+下载的实现：找到一个文件位置，复制它的文件名，在已经打开的文件目录中，“写“入这个文件，然后把名字也给复制过来
+···
+if list == []:这句话会被pycharm提示要求简化成if not list：
+···
