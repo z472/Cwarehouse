@@ -1,0 +1,161 @@
+综述：不论哪种布局管理器，都要清楚的概念是相对位置。它的好处是窗口是随时都可变的，如果由相对位置来定位控件会比较方便。
+    体现在padx,pady,ipadx,ipady(pack,grid都有）和grid的对齐stick属性等等方面
+1.pack中关于expand，side，fill组合时的使用：
+fill--设置控件填满所分配空间的方向
+expand--设置是否填满额外的父容器空间
+一个特殊的案例：
+·误区：有fill一定要有expand吗？
+    from tkinter import *
+    root = Tk()
+    root.geometry("500x500+500+150")
+    Frame(root, bg='Blue', height=200,).pack(side=TOP, fill=X, expand=1)
+    root.mainloop()
+    以上的高度和窗口的大小单位都是像素，所以Frame比root要小，但结果是由于expand的干扰，
+    Frame没有做到side=TOP，如果不写expand=1就会正确，所以当时看csdn的帖子有人说expand会使side“无效”。
+    但如果去测试对多个控件都设置同样的side=TOP，fill=X,和expand=1，会发现side仍在发挥作用。所以也不是完全的无效。
+    真实失效的是expand=1，它的存在不会影响到fill的行动，由于没有设置那个方向的起始大小，而是fill完全填充了那个方向。
+
+·逻辑类错误：
+fill的方向与设置同方向的属性冲突：
+    Frame(root, bg='Blue', height=30, width=30).pack(side=TOP, fill=X, )
+    结果：width失效，后面的语句fill起效
+缺少某一个方向属性的设置：
+    Frame(root, bg='Blue', height=30, ).pack(side=TOP, fill=Y, )
+    结果：该方向的默认值为1，单位是像素（几乎看不到）
+
+·side的“锁定”效果：
+基于上面的逻辑类错误1，如果写成：
+    Frame(root, bg='Blue', height=30, width=30).pack(side=TOP, fill=Y, )
+    结果：fill=Y失效了，与我分析的“pack是后面的语句，后执行，覆盖之前的影响”的理论矛盾了。故得出side会“锁定”这个方向。
+
+·height,width等属性错误：
+很多控件都有height,width,padx等等属性，但是它们单位可能不同，一是字符Label['height']=1是可行的，但是如果Frame['height']=1，
+你很容易认为没有看到Frame控件，因为它单位是像素。
+
+2.常见赋值错误
+    l1 = Label(text='1',bg='Blue').pack()
+    此时l1为NoneType，想用变量就得把设置和pack分开写。
+
+3.三种布局管理器可以混用吗？
+不同种布局管理器作用在同一个父容器中会冲突（混用失败）
+    在对一个父容器是root的控件使用gird之后，又对一个父容器为root的控件使用pack会报以下的错。
+    _tkinter.TclError: cannot use geometry manager pack inside . which already has slaves managed by grid
+    而且两者单独显示的时候是在窗口的两个互不重合的位置，说明每种管理器是抢着控制根窗口root的。那么可以在两个不同的父容器之间，用不同的布局方法吗？
+不同种管理器可以应用到不同的父容器里（混用成功）
+    f2 = Frame(root, bg='Red',height=200,width=300)
+    f2.pack(anchor='ne')
+    Label(f2, text='1', bg='Green', height=20, width=20).grid(row=0, column=0)
+    Label(f2, text='2', bg='Blue', height=20, width=20).grid(row=0, column=1)
+    print('height=', f2.cget('height'), 'width=', f2.cget('width'))
+    因为根窗口也只是一个容器罢了，它可以应用三种布局中的一种，那么其他容器也可以这么使用。
+    但要注意的是，在这个容器里的所有控件的布局管理选择是要一致的，否则会报错。
+    比如：在一个LabelFrame里有三个控件（它自己是用的pack），两个用gird,另一个用pack。
+    gird会报错说它的父容器已经使用pack了。但错误不在他这里。而在那个pack控件里。
+
+4.子控件对父容器的影响:
+
+5.键盘按键绑定：
+事件序列
+Tkinter 使用一种称为事件序列的机制来允许用户定义事件
+语法描述：
+<modifier-type-detail>
+事件序列是包含在尖括号（<...>）中
+    type 部分的内容是最重要的，它通常用于描述普通的事件类型，例如鼠标点击或键盘按键点击（详见下方）。
+    modifier 部分的内容是可选的，它通常用于描述组合键，例如 Ctrl + c，Shift + 鼠标左键点击（详见下方）。
+    detail 部分的内容是可选的，它通常用于描述具体的按键，例如 Button-1 表示鼠标左键。
+三类的详细信息https://blog.csdn.net/qq_41556318/article/details/85274368
+
+6.Listbox选择问题：
+    想对Listbox bind一个方法，鼠标左键单击点击（选择），返回当前选中项并后续操作。发现，每次点击返回"当前选中"的项都是不包括刚刚点击选择的项的。
+    用到<<ListboxSelect>>虚拟事件，介绍网站说法如下：
+    When a user changes the selection, a <<ListboxSelect>> virtual event is generated.
+    You can bind to this to take any action you need. Depending on your application, you may also want to
+    bind to a double-click <Double-1> event and use it to invoke an action with the currently selected item.
+    实测设置为双击鼠标左键效果一样。这两种手段都是"考虑"到了新点击的项目。
+
+7.关于事件绑定：
+    bind参数里的回调函数的参数要有event（不是强制写这个名字），往往我也不用这个事件event本身，但是不写就会报错，
+        lambda函数也会要求我"随便"写一个参数，否则情况如下：
+    TypeError: <lambda>() takes 0 positional arguments but 1 was given
+    这个event是可以直接print的，如虚拟事件的event信息：<VirtualEvent event x=0 y=0>
+
+8.虚拟事件点击，到底执行几次事件？
+    写"文件类型"选择时，之前有测试虚拟事件的选取是正确的，但是当我继续写”文件选择“之后的操作时，它的输出值显示它执行了两次后续操作代码。
+    执行次数不仅是2次，点击一次左键"效果"是在这个位置连续点击两次的效果，如果把第二次刨除掉也许还可以多选，做到正确性。
+    经本人“慢动作”点击左键之后不松手，发现，错误的两次操作是在点击下去的一瞬间发生了的。
+
+9.等效于虚拟事件的<Double-Button-1>选取问题：
+    它在“底下操作”代码的影响下的执行效果不像虚拟事件执行“2次”一样，但是它第一次双击的位置不会显示选取（可能是受到左侧选取的影响）
+    然后当再一次双击选取别的项时，它的选取输出显示是错误的，只有本次选取，没有上次选取，这个值是完全由listbox.curselection()
+    来负责的。故判断是设置另一个listbox时，干扰了本项listbox的选取所致。可以从焦点等角度，先测试能不能在选取一个的时候把那个listbox
+    锁住。
+
+10.个人观点---事件绑定
+    tkinter内建了鼠标，键盘事件的绑定，有单击、拖拽、键盘也可以随便输入按键，但是它不方便实现一组---连续的用户行为的绑定。
+    学习tkinter感受：怀疑是tkinter功能不强大还是我了解到它的资料内容重复，深度不够？
+
+11.在mainloop之前开启了一个线程出现RuntimeError: main thread is not in main loop错误，当把线程的join()
+    即等待关闭函数放到后面就ok了。
+
+12.虚拟事件特点---凡是对控件进行同样的操作的行为都可以触发一次该事件（解释第8，9点）：
+    当绑定了左边选取点击响应的函数A之后，再在右边的文件类型列表框中点击选取文件类型B函数--它会映射到左边进行选取，且它的最后会调用一次A。
+    结果发现左边绑定的响应函数输出了两次。————结论是，由于右侧对左侧列表框有“单机选取”这一动作，故在正常调用B函数的末尾调用A之后又是
+    对A的一次--“单击选取”，它又执行了一遍A自己。上面的第八点就是同理，它是由选取动作触发，同时在执行内部语句的时候又对该列表框进行了
+    一次选取，故触发了两次。
+
+13.GUI的许多功能都是要结合用户操作来看来实现的，要考虑到用户的动作这点。
+
+14.回归日：还是事件绑定
+    回顾下第7点，之前说bind的第二个参数即绑定函数要有event这个“不必要”参数。之前的情况是绑定的函数是要传个lsitbox对象作为参数，event鼠标
+    点击事件没利用到。这次是绑定函数有使用到event和那个listbox对象。而且bind的绑定函数是个入口地址，不是函数的返回值，所以带参数的话就要使
+    用lambda表达式，具体写法：
+    def show_y(event, listbox):
+        print(listbox.nearest(event.y))
+    ...
+    l1 = listbox(...)
+    l1.bind('<Button-1>', lambda event, listbox=l1: show_y(event, l1))
+    很奇怪的是，lambda表达式如果参数写成event,l1的话，
+    报错：TypeError: <lambda>() missing 1 required positional argument: 'l1'
+    因为我认为它完全满足lambda的语法。也满足show_y的参数条件。未解之谜+1
+
+15.listbox.nearest(event.y)与不同事件绑定效果：
+    与Button-1和Double-1都会显示选定项目的索引作为返回值；而绑定事件为ListboxSelect时，不论怎么点都返回0，它总是很特殊，需留意。
+    该函数正常时的效果为返回事件绑定（一般就是鼠标点击event)时的那个索引，但它实际上并不是只返回一个索引，如果不点击到某一项上面，
+    它还会把最近的那个项目给选取。
+
+16.进入子文件夹遇到的奇怪特性：
+    问题：如果在之前选取某些项然后双击进入子文件夹，后面再次点击会出现类型选取框中选取的反应是正常的，但取消的反应是异常的（无效果）
+    在对每个相关变量都测试一遍发现，逻辑上每一步和第一次都一样了，问题仍然存在。但如果，在进入子文件夹前，取消掉选中项的话，后续操作
+    都正常运行。所以这问题就是这个工具自己的---特性。      在每次进入子文件夹前先取消一遍即可。
+
+17.Scrollbar颜色配置无效？
+
+18.StringVar类参数调用时单向性：
+    问题：
+    from tkinter import *
+    t = Tk()
+    t.geometry("500x500+500+150")
+    def retr_message(widge):
+        print(widge['textvariable'])
+    e_str = StringVar()
+    e = Entry(t, bg='Magenta',  width=20, textvariable=e_str)
+    e.pack(side=TOP, fill=X, )
+    b = Button(t, text='click', command=lambda: retr_message(e))
+    b.pack()
+    t.mainloop()
+    函数retr_message()：想返回传入Entry控件显示的文字内容
+    输出为：PY_VAR0     print的类型为str，不能get() 如果不使用StringVar类型e_str.get(),则不能显示该控件的值
+    总结就是：从控件方向来显示，此路不通；很不符合编程特性的要去找给控件赋值的StringVar类型,
+    但这可能就是tkinter式处理吧。
+
+19.奇怪的import语句，想使用tkinter.filedialog
+    from tkinter import *
+    dirname = filedialog.askdirectory()
+    报错：filedialog is not defined
+    from tkinter import filedialog
+    dirname = filedialog.askdirectory()
+    正确
+
+20.tkinter无响应，线程不用关闭的吗？
+    由于ftplib中下载的函数retrbinary()时阻塞性的，命令行时要用到线程来获取实时下载到本地文件的大小。
+    Thread().join()该句线程关闭语句在root.mainloop()之前执行就会导致线程无响应。不写反而对。有时间查下什么原因。
